@@ -1,0 +1,7 @@
+Job Title: Data Analyst
+Company: Example Analytics
+
+We are seeking a Data Analyst with strong SQL and Python skills.
+The candidate should have experience analyzing large datasets, building dashboards, and communicating insights to stakeholders.
+Preferred qualifications include Tableau, risk analysis, and experience in financial services.
+Responsibilities include creating reports, supporting decision-making, and working with cross-functional teams.

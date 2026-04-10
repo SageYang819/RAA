@@ -1,0 +1,24 @@
+Sijie Yang
+
+Summary:
+Data science graduate student with experience in banking, risk analysis, SQL, Python, and dashboard reporting.
+
+Skills:
+Python, R, SQL, Tableau, Excel, Git
+
+Experience:
+Huaxia Bank
+Corporate Banker
+2014-2023
+- Managed more than 50 corporate clients in commercial banking.
+- Conducted credit analysis and risk assessments for loan applications.
+- Prepared due diligence reports and monitored portfolio risk.
+- Worked with financial data and internal reporting tools.
+
+Projects:
+Bank Marketing Project
+- Built predictive models using Python and SQL.
+- Analyzed customer marketing data and created performance reports.
+
+Education:
+Master of Data Science, UBC
