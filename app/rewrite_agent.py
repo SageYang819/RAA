@@ -188,6 +188,7 @@ Rewrite the candidate's summary so it is clearly tailored for the target job bel
 - Every claim in the rewrite must be verifiable from the original summary alone.
 - Do NOT fabricate numbers, titles, tools, or achievements.
 - Naturally incorporate 2–4 of the JD's key terms ONLY where they genuinely reflect what is already in the summary.
+- Do NOT use meta-language that references the JD directly. Banned phrases include: "aligns with", "as required by", "in accordance with the requirements", "to meet the needs of", "as needed for this role", or any phrasing that makes the summary sound like it is responding to a job posting rather than describing the candidate.
 
 === QUALITY RULES ===
 - Keep it to 3–5 sentences.
