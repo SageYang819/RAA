@@ -7,7 +7,12 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def rewrite_bullet(bullet: str, jd_requirement: str, strict_preserve_mode: bool = False) -> dict:
+def rewrite_bullet(
+    bullet: str,
+    jd_requirement: str,
+    jd_responsibilities: list[str] = None,
+    strict_preserve_mode: bool = False,
+) -> dict:
     preserve_rule = """
 - Keep the rewritten sentence as close as possible to the original wording and structure.
 - Only make minimal edits: surface the JD-relevant angle, sharpen the impact verb if needed.
@@ -16,8 +21,16 @@ def rewrite_bullet(bullet: str, jd_requirement: str, strict_preserve_mode: bool 
 - Restructure the bullet if needed to lead with the most JD-relevant action or outcome.
 - Strengthen the impact verb to be more specific and results-oriented (e.g. "Drove", "Delivered", "Reduced", "Scaled").
 - If the original bullet has a quantified result, preserve it exactly — do not alter numbers.
-- If no metric exists, do NOT fabricate one.
-- Use the JD requirement's language and framing where it genuinely reflects what the original bullet describes.
+- Use the JD's language and framing where it genuinely reflects what the original bullet describes.
+"""
+
+    # Build responsibilities context block
+    responsibilities_block = ""
+    if jd_responsibilities:
+        resp_lines = "\n".join(f"- {r}" for r in jd_responsibilities[:8])
+        responsibilities_block = f"""
+JD Responsibilities (for framing reference only — use this language if the original bullet genuinely supports it):
+{resp_lines}
 """
 
     prompt = f"""
@@ -25,22 +38,25 @@ You are a senior resume strategist helping a candidate tailor their resume for a
 
 Your task:
 Rewrite ONE resume bullet so it clearly demonstrates the candidate's fit for the target job requirement.
-The rewrite must feel like it was written FOR this specific job — not a generic polish.
+The rewrite must reflect what the candidate ACTUALLY DID — not what the job requires.
+Use the JD's language and framing only where the original bullet genuinely supports it.
 
-=== STRICT RULES (never violate) ===
-- Do NOT invent experience, tools, technologies, certifications, or qualifications not in the original.
-- Do NOT add language or communication skill claims unless clearly present in the original.
-- Do NOT fabricate metrics, numbers, or scale.
-- Do NOT add collaborators, teams, or stakeholders not mentioned in the original.
-- The rewritten bullet must be grounded in what the original bullet actually describes.
+=== ABSOLUTE RULES (never violate, no exceptions) ===
+- You are working ONLY with what is in the original bullet. That is your only source of truth.
+- Do NOT invent tools, technologies, systems, certifications, or qualifications not in the original.
+- Do NOT add any claims about communication, collaboration, stakeholders, or teamwork unless clearly stated in the original bullet.
+- Do NOT fabricate metrics, numbers, percentages, or scale.
+- Do NOT add any new skills, responsibilities, or activities not described in the original bullet.
+- If the original bullet only weakly relates to the JD requirement, make only minimal surface-level adjustments. Do not force a strong claim.
+- The test: could a fact-checker verify every word of the rewrite from the original bullet alone? If not, remove it.
 
 === QUALITY RULES ===
 {preserve_rule}
-- The rewrite must clearly show relevance to the job requirement — a recruiter should immediately see the connection.
 - Lead with a strong past-tense action verb.
 - Remove filler phrases like "Responsible for" or "Helped with".
+- The rewrite should make the JD relevance visible — a recruiter reading this bullet should immediately see the connection to the requirement.
 - Keep it to 1–2 concise sentences.
-
+{responsibilities_block}
 === INPUTS ===
 Original bullet:
 {bullet}
@@ -52,7 +68,7 @@ Target job requirement:
 Return ONLY valid JSON, no markdown:
 {{
   "rewritten_bullet": "...",
-  "reason": "One sentence explaining what was changed and why it better matches the JD requirement."
+  "reason": "One sentence: what angle was emphasized and why it matches the JD requirement — based only on what was in the original bullet."
 }}
 """
 
@@ -90,9 +106,10 @@ def select_best_bullet(bullets: list[str], jd_requirement: str) -> str | None:
     prompt = f"""
 You are a resume alignment expert.
 
-Given the list of resume bullets below, select the ONE bullet that is MOST relevant to the target job requirement.
-Choose the bullet whose underlying experience most closely supports the requirement — even if the wording differs.
-If no bullet is relevant, reply with 0.
+Given the list of resume bullets below, select the ONE bullet whose underlying experience
+most closely supports the target job requirement — even if the wording differs.
+
+If no bullet is meaningfully relevant, reply with 0.
 
 Job requirement:
 {jd_requirement}
@@ -129,9 +146,14 @@ Reply with ONLY the number of the best bullet (e.g. "3"), or "0" if none are rel
     return best_bullet if best_score > 0 else None
 
 
-def rewrite_summary(original_summary: str, jd: object, strict_preserve_mode: bool = False) -> str:
+def rewrite_summary(
+    original_summary: str,
+    jd: object,
+    strict_preserve_mode: bool = False,
+) -> str:
     """
     Rewrite the resume summary to reflect the candidate's fit for this specific JD.
+    Only uses information present in the original summary.
     """
     job_title = getattr(jd, "job_title", "") or ""
     company = getattr(jd, "company", "") or ""
@@ -145,7 +167,7 @@ def rewrite_summary(original_summary: str, jd: object, strict_preserve_mode: boo
     if required_skills:
         jd_context += f"\nKey Requirements: {', '.join(required_skills[:8])}"
     if responsibilities:
-        jd_context += f"\nCore Responsibilities: {'; '.join(responsibilities[:4])}"
+        jd_context += f"\nCore Responsibilities:\n" + "\n".join(f"- {r}" for r in responsibilities[:6])
     if keywords:
         jd_context += f"\nKeywords: {', '.join(keywords[:10])}"
 
@@ -159,15 +181,19 @@ def rewrite_summary(original_summary: str, jd: object, strict_preserve_mode: boo
     prompt = f"""
 You are a senior resume strategist.
 
-Rewrite the candidate's resume summary so it is clearly tailored for the target job below.
-The new summary should make a recruiter immediately see why this candidate fits this role.
+Rewrite the candidate's summary so it is clearly tailored for the target job below.
 
-=== RULES ===
-- Do NOT invent experience, skills, or qualifications not implied by the original summary.
-- Naturally incorporate 2–4 of the JD's key terms where they genuinely reflect the candidate's background.
+=== ABSOLUTE RULES ===
+- You are working ONLY from the original summary. Do NOT add skills, experience, or qualifications not present in it.
+- Every claim in the rewrite must be verifiable from the original summary alone.
+- Do NOT fabricate numbers, titles, tools, or achievements.
+- Naturally incorporate 2–4 of the JD's key terms ONLY where they genuinely reflect what is already in the summary.
+
+=== QUALITY RULES ===
 - Keep it to 3–5 sentences.
 - Do NOT start with "I" or the candidate's name.
 - {preserve_note}
+- Make it immediately clear to a recruiter why this candidate fits THIS specific role.
 
 === ORIGINAL SUMMARY ===
 {original_summary}
@@ -196,6 +222,9 @@ def optimize_resume(resume, jd, strict_preserve_mode: bool = False):
     for exp in resume.experience:
         all_bullets.extend(exp.bullets)
 
+    # Pass JD responsibilities to rewrite_bullet for better framing
+    jd_responsibilities = getattr(jd, "responsibilities", []) or []
+
     for skill in jd.required_skills:
         best_bullet = select_best_bullet(all_bullets, skill)
 
@@ -208,8 +237,9 @@ def optimize_resume(resume, jd, strict_preserve_mode: bool = False):
         used_bullets.add(best_bullet)
 
         rewritten = rewrite_bullet(
-            best_bullet,
-            skill,
+            bullet=best_bullet,
+            jd_requirement=skill,
+            jd_responsibilities=jd_responsibilities,
             strict_preserve_mode=strict_preserve_mode,
         )
 
