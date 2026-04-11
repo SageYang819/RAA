@@ -131,8 +131,12 @@ for key, value in defaults.items():
 
 
 def reset_app():
+    widget_keys = {"resume_text", "jd_text", "jd_url", "strict_preserve_mode"}
+    for key in widget_keys:
+        st.session_state.pop(key, None)
     for key, value in defaults.items():
-        st.session_state[key] = value
+        if key not in widget_keys:
+            st.session_state[key] = value
 
 
 # ── Header ───────────────────────────────────────────────────────────────────
