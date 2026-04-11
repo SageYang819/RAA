@@ -2,7 +2,7 @@ from typing import Any, Dict, List
 
 from app.parsers import parse_resume_text, parse_jd_text
 from app.aligner import align_resume_to_jd
-from app.rewrite_agent import optimize_resume, apply_optimized_bullets
+from app.rewrite_agent import optimize_resume, apply_optimized_bullets, rewrite_summary
 from app.normalizers import normalize_resume_text_to_markdown, normalize_jd_text_to_markdown
 
 
@@ -69,7 +69,7 @@ def build_change_log(
     return change_log
 
 
-def build_final_resume(resume, final_experience) -> Dict[str, Any]:
+def build_final_resume(resume, final_experience, tailored_summary: str = "") -> Dict[str, Any]:
     serialized_projects = [
         {
             "name": proj.name,
@@ -90,7 +90,7 @@ def build_final_resume(resume, final_experience) -> Dict[str, Any]:
     return {
         "name": getattr(resume, "name", ""),
         "contact_info": getattr(resume, "contact_info", []),
-        "summary": getattr(resume, "summary", ""),
+        "summary": tailored_summary or getattr(resume, "summary", ""),
         "skills": getattr(resume, "skills", {}),
         "languages": getattr(resume, "languages", []),
         "education": getattr(resume, "education", []),
@@ -284,6 +284,13 @@ def run_resume_optimization(
     alignment = align_resume_to_jd(resume, jd)
     optimized = optimize_resume(resume, jd, strict_preserve_mode=strict_preserve_mode)
 
+    # Rewrite summary tailored to this specific JD
+    tailored_summary = rewrite_summary(
+        original_summary=getattr(resume, "summary", "") or "",
+        jd=jd,
+        strict_preserve_mode=strict_preserve_mode,
+    )
+
     if selected_indices is None:
         selected_indices = list(range(len(optimized)))
 
@@ -292,7 +299,7 @@ def run_resume_optimization(
     ]
 
     final_experience = apply_optimized_bullets(resume, selected_optimized)
-    final_resume = build_final_resume(resume, final_experience)
+    final_resume = build_final_resume(resume, final_experience, tailored_summary=tailored_summary)
     warnings = generate_warnings(alignment, selected_optimized)
     change_log = build_change_log(optimized, selected_indices)
 
@@ -309,4 +316,6 @@ def run_resume_optimization(
         "final_resume_markdown": render_resume_markdown(final_resume),
         "warnings": warnings,
         "change_log": change_log,
+        "original_summary": getattr(resume, "summary", ""),
+        "tailored_summary": tailored_summary,
     }
